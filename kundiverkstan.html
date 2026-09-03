@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kund i Verkstan</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="hazard-bar"></div>
+  <div class="appbar">
+    <a class="back" href="index.html">‹</a>
+    <div>
+      <h1>Kund i Verkstan</h1>
+      <div class="sub">Kundbesök på plats</div>
+    </div>
+  </div>
+
+  <div class="progress"></div>
+  <div class="step-label"></div>
+
+  <main>
+    <div class="status-banner"><div class="msg" id="statusMsg"></div></div>
+
+    <form id="kundForm">
+
+      <!-- Steg 1: Grunddata -->
+      <section class="step" data-label="Grunddata">
+        <div class="field">
+          <label for="datum">Datum <span class="required">*</span></label>
+          <input type="date" id="datum" required>
+        </div>
+        <div class="field">
+          <label for="kund">Kund <span class="required">*</span></label>
+          <div class="hint">Företagsnamn</div>
+          <input type="text" id="kund" required>
+        </div>
+        <div class="field">
+          <label for="kontaktperson">Kontaktperson <span class="required">*</span></label>
+          <div class="hint">Namn på besökaren</div>
+          <input type="text" id="kontaktperson" required>
+        </div>
+        <div class="field">
+          <label for="telefon">Telefonnummer <span class="required">*</span></label>
+          <input type="tel" id="telefon" required>
+        </div>
+        <div class="field">
+          <label for="epost">E-post</label>
+          <input type="email" id="epost">
+        </div>
+        <div class="field">
+          <label for="markning">Märkning</label>
+          <div class="hint">Projektnummer eller annat</div>
+          <input type="text" id="markning">
+        </div>
+      </section>
+
+      <!-- Steg 2: Tekniker -->
+      <section class="step" data-label="Tekniker">
+        <div class="field">
+          <label>Vår Kontaktperson <span class="required">*</span></label>
+          <div class="hint">som tog emot uppgifterna.</div>
+          <div id="teknikerContainer"></div>
+        </div>
+      </section>
+
+      <!-- Steg 3: Ärende -->
+      <section class="step" data-label="Ärende">
+        <div class="field">
+          <label for="beskrivArendet">Beskriv ärendet <span class="required">*</span></label>
+          <div class="hint">till exempel: lagning av band / hämtning av material (listas i nästa avsnitt) / evtl. arbetstid</div>
+          <textarea id="beskrivArendet" required></textarea>
+        </div>
+      </section>
+
+      <!-- Steg 4: Material -->
+      <section class="step" data-label="Material">
+        <div id="materialContainer"></div>
+        <button type="button" class="add-material-btn" id="addMaterialBtn">+ Lägg till material</button>
+      </section>
+
+      <!-- Steg 5: Avslutning -->
+      <section class="step" data-label="Avslutning">
+        <div class="field">
+          <label for="bestallning">Eventuellt beställning av material/band:</label>
+          <input type="text" id="bestallning">
+        </div>
+        <div class="field">
+          <label for="ovrigt">Övriga anmärkningar:</label>
+          <input type="text" id="ovrigt">
+        </div>
+        <div class="field">
+          <label>Bilder:</label>
+          <div class="hint">Ladda upp maximalt 5 filer (bild eller video). Maximalt 10 MB per fil.</div>
+          <label class="upload-label">
+            📎 Lägg till fil
+            <input type="file" id="fileInput" accept="image/*,video/*" multiple capture="environment">
+          </label>
+          <div class="file-list" id="fileList"></div>
+        </div>
+        <button type="button" class="btn primary" id="submitBtn" style="margin-top:8px;">Skicka</button>
+      </section>
+
+    </form>
+  </main>
+
+  <div class="bottom-nav" id="bottomNav">
+    <button type="button" class="btn ghost back-btn" id="backBtn">Bakåt</button>
+    <button type="button" class="btn primary" id="nextBtn">Nästa</button>
+  </div>
+
+<script src="app.js"></script>
+<script>
+  const form = document.getElementById("kundForm");
+  renderTeknikerCheckboxes(document.getElementById("teknikerContainer"));
+  const materialUI = initMaterialList(
+    document.getElementById("materialContainer"),
+    document.getElementById("addMaterialBtn")
+  );
+  const fileUI = initFileUpload(document.getElementById("fileInput"), document.getElementById("fileList"));
+  const steps = initSteps(form);
+
+  const nextBtn = document.getElementById("nextBtn");
+  const backBtn = document.getElementById("backBtn");
+
+  function syncNav() {
+    const last = steps.current === steps.total - 1;
+    nextBtn.style.display = last ? "none" : "flex";
+    backBtn.style.display = steps.current === 0 ? "none" : "flex";
+  }
+  nextBtn.addEventListener("click", () => { steps.next(); syncNav(); });
+  backBtn.addEventListener("click", () => { steps.back(); syncNav(); });
+  syncNav();
+
+  document.getElementById("submitBtn").addEventListener("click", () => {
+    const fields = {
+      Datum: document.getElementById("datum").value,
+      Kund: document.getElementById("kund").value,
+      Kontaktperson: document.getElementById("kontaktperson").value,
+      Telefonnummer: document.getElementById("telefon").value,
+      Epost: document.getElementById("epost").value,
+      Markning: document.getElementById("markning").value,
+      VarKontaktperson: getTeknikerValue(document.getElementById("teknikerContainer")),
+      BeskrivArendet: document.getElementById("beskrivArendet").value,
+      BestallningMaterial: document.getElementById("bestallning").value,
+      OvrigaAnmarkningar: document.getElementById("ovrigt").value,
+    };
+    const materials = getMaterialsData(document.getElementById("materialContainer"));
+    const files = fileUI.getFiles();
+
+    submitForm({
+      formType: "kundiverkstan",
+      fields,
+      materials,
+      files,
+      submitBtn: document.getElementById("submitBtn"),
+      statusEl: document.getElementById("statusMsg"),
+    });
+  });
+</script>
+</body>
+</html>
